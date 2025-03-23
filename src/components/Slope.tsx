@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, ReactElement, useMemo, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Vector3, Group, Object3D, DoubleSide } from 'three';
+import ObstacleTree from './ObstacleTree';
 
 // The number of slope segments to render
 const SLOPE_SEGMENTS = 40; // Increased for longer visible slope
@@ -126,8 +127,15 @@ const Tree: React.FC<{
   );
 };
 
-// Single collidable tree on the slope
-const ObstacleTree: React.FC = () => {
+// Update the Slope component interface to accept the callback prop
+interface SlopeProps {
+  onUpdateObstacles?: (positions: {x: number, z: number}[]) => void;
+}
+
+// Renamed to avoid conflict with imported component
+const OldObstacleTree: React.FC<{
+  onPositionUpdate?: (position: {x: number, z: number}) => void;
+}> = ({ onPositionUpdate }) => {
   const [position, setPosition] = useState<[number, number, number]>([0, 0, OBSTACLE_SPAWN_DISTANCE]);
   
   // Reset the tree with a new random position
@@ -142,24 +150,35 @@ const ObstacleTree: React.FC = () => {
   // Move the tree and reset when it goes off-screen
   useFrame((state, delta) => {
     if (treeRef.current) {
-      // Move tree forward continuously at slope speed
-      treeRef.current.position.z -= SLOPE_SPEED * delta * 60;
+      // Move tree forward with adjusted speed for consistent motion
+      const moveAmount = SLOPE_SPEED * delta * 60;
+      treeRef.current.position.z -= moveAmount;
       
-      // If tree has moved too far (past the player and out of sight), reset to a new random position
-      // Using a much lower value to ensure trees stay visible longer
-      if (treeRef.current.position.z < -150) {
+      // Report position for collision detection - IMPORTANT for gameplay
+      if (onPositionUpdate) {
+        // For immediate collision detection, use a larger prediction
+        // This makes the collision happen before visual intersection
+        const predictedZ = treeRef.current.position.z - (moveAmount * 2);
+        
+        onPositionUpdate({
+          x: treeRef.current.position.x,
+          z: predictedZ 
+        });
+      }
+      
+      // If tree has moved too far, reset to a new position
+      if (treeRef.current.position.z < -10) {
         resetTree();
       }
     }
   });
   
-  // Initial setup and spawn timer
+  // Initial setup
   useEffect(() => {
     // Initial placement
     resetTree();
     
-    // Set up timer to occasionally reset the tree even if it hasn't gone off-screen
-    // This creates more varied timing between obstacles
+    // Set up timer to occasionally reset the tree
     const intervalId = setInterval(() => {
       if (Math.random() < 0.3) { // 30% chance to respawn
         // Only respawn if the current tree is far enough away
@@ -182,12 +201,31 @@ const ObstacleTree: React.FC = () => {
   );
 };
 
-const Slope: React.FC = () => {
+const Slope: React.FC<SlopeProps> = ({ onUpdateObstacles }) => {
   // Convert hill angle to radians
   const hillAngleRad = (HILL_ANGLE * Math.PI) / 180;
   
   // Create a ref for the scene 
   const sceneRef = useRef<Group>(null);
+  
+  // Track obstacle positions for collision detection
+  const obstaclePositions = useRef<{x: number, z: number}[]>([]);
+  
+  // Update obstacle position in the collection
+  const handleObstaclePositionUpdate = useCallback((position: {x: number, z: number}) => {
+    // Add a small hitbox width to increase collision reliability
+    const adjustedPosition = {
+      x: position.x,
+      z: position.z
+    };
+    
+    obstaclePositions.current = [adjustedPosition]; // Currently just one obstacle
+    
+    // Report obstacle positions to the Game component
+    if (onUpdateObstacles) {
+      onUpdateObstacles(obstaclePositions.current);
+    }
+  }, [onUpdateObstacles]);
   
   // Simplified physics-based downhill slope
   return (
@@ -220,8 +258,8 @@ const Slope: React.FC = () => {
         {/* Trees on the left and right sides */}
         <TreeField />
         
-        {/* Obstacle trees on the slope (sparse) */}
-        <ObstacleTree />
+        {/* Obstacle trees on the slope - using our improved component */}
+        <ObstacleTree onPositionUpdate={handleObstaclePositionUpdate} />
         
         {/* Distant mountains for horizon */}
         <mesh position={[0, 10, 230]} castShadow>

@@ -6,10 +6,6 @@ function App() {
   return (
     <div className="App">
       <Game />
-      <div className="game-controls">
-        <h2>Ski Free Game</h2>
-        <p>Use the arrow keys to steer:</p>
-      </div>
     </div>
   )
 }

@@ -16,8 +16,18 @@ const ObstacleTree: React.FC<{
   // Reset the tree with a new random position
   const resetTree = useCallback(() => {
     // Random x position within the slope width (but not too close to the edges)
-    const xPos = (Math.random() * (SLOPE_WIDTH - 4)) - ((SLOPE_WIDTH - 4) / 2);
+    // Using Math.round to ensure consistent grid-like positioning
+    const randomOffset = Math.floor(Math.random() * 5) * 0.6 - 1.5;
+    const xPos = randomOffset;
+    
+    // Set the new position
     setPosition([xPos, 0, OBSTACLE_SPAWN_DISTANCE]);
+    
+    // If the tree ref exists, update its position immediately to prevent jitter
+    if (treeRef.current) {
+      treeRef.current.position.x = xPos;
+      treeRef.current.position.z = OBSTACLE_SPAWN_DISTANCE;
+    }
   }, []);
   
   const treeRef = useRef<Group>(null);
@@ -28,8 +38,11 @@ const ObstacleTree: React.FC<{
   // Move the tree and reset when it goes off-screen
   useFrame((state, delta) => {
     if (treeRef.current) {
-      // Move tree forward with consistent motion
-      const moveAmount = SLOPE_SPEED * delta * 60;
+      // Use a consistent delta time for smoother movement
+      const smoothDelta = Math.min(delta, 0.05); // Cap the delta to prevent large jumps
+      const moveAmount = SLOPE_SPEED * smoothDelta * 60;
+      
+      // Apply movement directly to the z-axis only
       treeRef.current.position.z -= moveAmount;
       
       // Report position for collision detection - crucial for immediate feedback
@@ -96,10 +109,18 @@ const ObstacleTree: React.FC<{
   }, [resetTree]);
   
   // Aspen tree visual properties
-  const height = useMemo(() => 3.5 + Math.random() * 1.5, []);
+  const height = useMemo(() => 3.5 + Math.random() * 0.5, []); // Less height variation
   const treeTopColor = "#F7D94C"; // Bright yellow-gold for aspen foliage
   const treeTrunkColor = "#FAFAFA"; // Brighter white for aspen trunk
-  const trunkBend = Math.random() * 0.1 - 0.05;
+  const trunkBend = useMemo(() => Math.random() * 0.02 - 0.01, []); // Much less trunk bend
+  
+  // Use a stable ref for the position to prevent wobbling during updates
+  const stablePositionRef = useRef(position);
+  
+  // Only update position in useEffect to avoid constant re-renders
+  useEffect(() => {
+    stablePositionRef.current = position;
+  }, [position]);
   
   return (
     <group ref={treeRef} position={position}>
@@ -109,7 +130,7 @@ const ObstacleTree: React.FC<{
         <meshStandardMaterial color="#FFFFFF" />
       </mesh>
       
-      {/* Aspen trunk */}
+      {/* Aspen trunk with minimal bend */}
       <group position={[0, height / 2 - 0.5, 0]} rotation={[0, 0, trunkBend]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.15, 0.2, height, 8]} />
@@ -125,22 +146,22 @@ const ObstacleTree: React.FC<{
         ))}
       </group>
       
-      {/* Aspen foliage - multiple clusters */}
+      {/* Aspen foliage - more compact clusters */}
       <group position={[0, height, 0]}>
         <mesh position={[0, 0.5, 0]} castShadow>
-          <sphereGeometry args={[1.0, 16, 16]} />
+          <sphereGeometry args={[0.9, 16, 16]} />
           <meshStandardMaterial color={treeTopColor} />
         </mesh>
-        <mesh position={[0.7, 0.2, 0]} castShadow>
+        <mesh position={[0.5, 0.2, 0]} castShadow>
+          <sphereGeometry args={[0.6, 16, 16]} />
+          <meshStandardMaterial color={treeTopColor} />
+        </mesh>
+        <mesh position={[-0.5, 0.2, 0]} castShadow>
+          <sphereGeometry args={[0.6, 16, 16]} />
+          <meshStandardMaterial color={treeTopColor} />
+        </mesh>
+        <mesh position={[0, -0.2, 0.3]} castShadow>
           <sphereGeometry args={[0.7, 16, 16]} />
-          <meshStandardMaterial color={treeTopColor} />
-        </mesh>
-        <mesh position={[-0.7, 0.3, 0]} castShadow>
-          <sphereGeometry args={[0.7, 16, 16]} />
-          <meshStandardMaterial color={treeTopColor} />
-        </mesh>
-        <mesh position={[0, -0.3, 0.5]} castShadow>
-          <sphereGeometry args={[0.8, 16, 16]} />
           <meshStandardMaterial color={treeTopColor} />
         </mesh>
       </group>

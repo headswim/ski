@@ -231,7 +231,7 @@ const Slope: React.FC<SlopeProps> = ({ onUpdateObstacles }) => {
   return (
     <>
       {/* Main scene with the slope */}
-      <group rotation={[-hillAngleRad, 0, 0]}>
+      <group rotation={[hillAngleRad, 0, 0]}>
         {/* Snow-covered ground (will be big enough that we don't need to move it) */}
         <mesh 
           position={[0, -0.5, 50]} 

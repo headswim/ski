@@ -141,7 +141,7 @@ const Game: React.FC<GameProps> = ({ width = '100%', height = '100vh' }) => {
     <div style={{ width, height }}>
       <Canvas
         camera={{ 
-          position: [0, 3, -6], // Higher position to see down the hill better
+          position: [0, 3, -6], // Closer camera position to see the skier better
           fov: 75
         }}
         shadows

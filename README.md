@@ -1,3 +1,4 @@
+# Keeping this for Legacy; this is how i built this; tricked it into making a car game, then made it a ski game. suck it AI
 # Car Driving Game
 
 A simple 3D first-person driving game built with React, Vite, and Three.js. Control a car as it drives down an endless road.
